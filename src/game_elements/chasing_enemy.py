@@ -1,6 +1,6 @@
 # chasing_enemy.py
 import pygame
-from constants import MORADO, VELOCIDAD_ENEMIGO_SEGUIDOR, RANGO_DETECCION
+from constants import VELOCIDAD_ENEMIGO_SEGUIDOR, RANGO_DETECCION, CHASING_ENEMY_SPRITE
 
 class EnemigoSeguidor(pygame.sprite.Sprite):
     """
@@ -15,9 +15,14 @@ class EnemigoSeguidor(pygame.sprite.Sprite):
         :param alto: Alto del enemigo.
         """
         super().__init__()
-        # Crea una superficie para el enemigo (un rectángulo morado).
-        self.image = pygame.Surface([ancho, alto])
-        self.image.fill(MORADO)
+        # Carga la imagen del enemigo seguidor. Asegúrate de tener "chasing_enemy.png" en la carpeta.
+        try:
+            self.image = pygame.image.load(CHASING_ENEMY_SPRITE).convert_alpha()
+        except pygame.error as message:
+            print(f"No se pudo cargar la imagen: {CHASING_ENEMY_SPRITE}")
+            raise SystemExit(message)
+        # Escala la imagen para que tenga un tamaño apropiado.
+        self.image = pygame.transform.scale(self.image, (ancho, alto))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -30,19 +35,14 @@ class EnemigoSeguidor(pygame.sprite.Sprite):
         dentro del rango de detección y lo persigue.
         :param jugador: Objeto del jugador para obtener su posición.
         """
-        # Calcula la distancia horizontal al jugador.
         distancia_x = jugador.rect.centerx - self.rect.centerx
 
-        # Comprueba si el jugador está dentro del rango de detección.
         if abs(distancia_x) < RANGO_DETECCION:
-            # Si el jugador está a la derecha, se mueve a la derecha.
             if distancia_x > 0:
                 self.velocidad_x = VELOCIDAD_ENEMIGO_SEGUIDOR
-            # Si el jugador está a la izquierda, se mueve a la izquierda.
             elif distancia_x < 0:
                 self.velocidad_x = -VELOCIDAD_ENEMIGO_SEGUIDOR
         else:
-            # Si el jugador está fuera de rango, el enemigo se detiene.
             self.velocidad_x = 0
             
         self.rect.x += self.velocidad_x

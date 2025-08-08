@@ -1,86 +1,137 @@
 # player.py
 import pygame
-# Importa las constantes definidas en el archivo constants.py.
-from constants import ANCHO_PANTALLA, ALTO_PANTALLA, ROJO, GRAVEDAD, FUERZA_SALTO, VELOCIDAD_JUGADOR
+from constants import (
+    ANCHO_PANTALLA, ALTO_PANTALLA, GRAVEDAD, FUERZA_SALTO, VELOCIDAD_JUGADOR,
+    PLAYER_IDLE_SPRITE, PLAYER_RUN_SPRITES, PLAYER_JUMP_SPRITE, ANIMATION_SPEED
+)
 
 class Jugador(pygame.sprite.Sprite):
     """
-    Representa al personaje principal del juego.
-    Hereda de pygame.sprite.Sprite para facilitar el manejo de sprites y colisiones.
+    Representa al personaje principal del juego con animaciones.
     """
     def __init__(self):
         """
         Constructor de la clase Jugador.
-        Inicializa la posición, tamaño, velocidad y estado del jugador.
+        Carga todas las imágenes de animación y las inicializa.
         """
-        super().__init__() # Llama al constructor de la clase padre (pygame.sprite.Sprite).
-        self.ancho = 30    # Ancho del jugador.
-        self.alto = 50     # Alto del jugador.
-        # Crea un objeto Surface para dibujar el jugador (un rectángulo rojo).
-        self.image = pygame.Surface([self.ancho, self.alto])
-        self.image.fill(ROJO) # Rellena la superficie con color rojo.
-        # Crea un objeto Rect que representa la posición y tamaño del jugador.
-        self.rect = self.image.get_rect()
-        self.rect.centerx = ANCHO_PANTALLA // 2 # Posición inicial X (centro de la pantalla).
-        self.rect.bottom = ALTO_PANTALLA - 50  # Posición inicial Y (cerca del suelo).
+        super().__init__()
+        self.ancho = 50
+        self.alto = 70
 
-        self.velocidad_x = 0 # Velocidad horizontal actual del jugador.
-        self.velocidad_y = 0 # Velocidad vertical actual del jugador (afectada por gravedad y salto).
-        self.en_suelo = False # Booleano para saber si el jugador está tocando una plataforma o el suelo.
+        # Diccionario para almacenar todas las animaciones.
+        self.animations = {}
+        self.current_animation_frame = 0 # Índice del frame actual de la animación.
+        self.animation_counter = 0       # Contador para controlar la velocidad de la animación.
+        self.facing_right = True         # Dirección a la que mira el jugador.
+
+        # Cargar imágenes de animación
+        try:
+            # Animación de IDLE (quieto)
+            self.animations["idle"] = pygame.transform.scale(
+                pygame.image.load(PLAYER_IDLE_SPRITE).convert_alpha(), (self.ancho, self.alto)
+            )
+            # Animación de RUN (correr)
+            self.animations["run"] = [
+                pygame.transform.scale(pygame.image.load(img).convert_alpha(), (self.ancho, self.alto))
+                for img in PLAYER_RUN_SPRITES
+            ]
+            # Animación de JUMP (saltar)
+            self.animations["jump"] = pygame.transform.scale(
+                pygame.image.load(PLAYER_JUMP_SPRITE).convert_alpha(), (self.ancho, self.alto)
+            )
+        except pygame.error as message:
+            print("Error al cargar las imágenes de animación del jugador. Asegúrate de que existen y están en la carpeta correcta.")
+            raise SystemExit(message)
+
+        # Establece la imagen inicial del jugador.
+        self.image = self.animations["idle"]
+        self.rect = self.image.get_rect()
+        self.rect.centerx = ANCHO_PANTALLA // 2
+        self.rect.bottom = ALTO_PANTALLA - 50
+
+        self.velocidad_x = 0
+        self.velocidad_y = 0
+        self.en_suelo = False
 
     def update(self, plataformas):
         """
-        Actualiza el estado del jugador en cada fotograma del juego.
-        Aplica gravedad, maneja el movimiento horizontal y detecta colisiones.
+        Actualiza el estado y la animación del jugador en cada fotograma.
         """
-        # Aplica la gravedad a la velocidad vertical.
+        # --- Lógica de movimiento y colisiones (sin cambios) ---
         self.velocidad_y += GRAVEDAD
-        # Limita la velocidad de caída para evitar que sea infinita.
         if self.velocidad_y > 10:
             self.velocidad_y = 10
 
-        # Mueve el jugador horizontalmente.
         self.rect.x += self.velocidad_x
-        # Asegura que el jugador no salga de los límites horizontales de la pantalla.
         if self.rect.left < 0:
             self.rect.left = 0
         if self.rect.right > ANCHO_PANTALLA:
             self.rect.right = ANCHO_PANTALLA
 
-        # Mueve el jugador verticalmente.
         self.rect.y += self.velocidad_y
-        self.en_suelo = False # Asume que el jugador no está en el suelo al inicio de la actualización.
+        self.en_suelo = False
 
-        # Manejo de colisiones con plataformas
-        # Itera sobre todas las plataformas para verificar si hay colisión.
         for plataforma in plataformas:
-            # Si el jugador colisiona con una plataforma.
             if self.rect.colliderect(plataforma.rect):
-                # Si el jugador estaba cayendo y colisiona con la parte superior de la plataforma.
-                if self.velocidad_y > 0 and self.rect.bottom <= plataforma.rect.centery:
-                    self.rect.bottom = plataforma.rect.top # Coloca al jugador justo encima de la plataforma.
-                    self.velocidad_y = 0 # Detiene la caída.
-                    self.en_suelo = True # El jugador está en el suelo.
-                # Si el jugador estaba subiendo y colisiona con la parte inferior de la plataforma.
-                elif self.velocidad_y < 0 and self.rect.top >= plataforma.rect.centery:
-                    self.rect.top = plataforma.rect.bottom # Coloca al jugador justo debajo de la plataforma.
-                    self.velocidad_y = 0 # Detiene el movimiento vertical.
+                if self.velocidad_y > 0 and self.rect.bottom <= plataforma.rect.centery + 10:
+                    self.rect.bottom = plataforma.rect.top
+                    self.velocidad_y = 0
+                    self.en_suelo = True
+                elif self.velocidad_y < 0 and self.rect.top >= plataforma.rect.centery - 10:
+                    self.rect.top = plataforma.rect.bottom
+                    self.velocidad_y = 0
 
-        # Si el jugador cae por debajo de la pantalla, lo resetea a una posición inicial.
-        # Esto es una forma simple de manejar la "muerte" o caída fuera del mapa.
         if self.rect.top > ALTO_PANTALLA:
             self.rect.centerx = ANCHO_PANTALLA // 2
             self.rect.bottom = ALTO_PANTALLA - 50
             self.velocidad_y = 0
-            self.en_suelo = False # Reinicia el estado de suelo.
+            self.en_suelo = False
+        # --- Fin de lógica de movimiento y colisiones ---
+
+        # --- Lógica de animación ---
+        self.animation_counter += 1
+        if self.animation_counter >= ANIMATION_SPEED:
+            self.animation_counter = 0
+            self.current_animation_frame = (self.current_animation_frame + 1) % len(self.animations["run"])
+
+        if not self.en_suelo:
+            # Si no está en el suelo, está saltando o cayendo.
+            self.image = self.animations["jump"]
+        elif self.velocidad_x != 0:
+            # Si se está moviendo horizontalmente, está corriendo.
+            self.image = self.animations["run"][self.current_animation_frame]
+        else:
+            # Si está en el suelo y no se mueve, está quieto.
+            self.image = self.animations["idle"]
+
+        # Voltear la imagen si el jugador cambia de dirección
+        if self.velocidad_x < 0 and self.facing_right:
+            self.facing_right = False
+            # Voltea todas las imágenes de animación para que miren a la izquierda.
+            for key in self.animations:
+                if isinstance(self.animations[key], list):
+                    self.animations[key] = [pygame.transform.flip(img, True, False) for img in self.animations[key]]
+                else:
+                    self.animations[key] = pygame.transform.flip(self.animations[key], True, False)
+        elif self.velocidad_x > 0 and not self.facing_right:
+            self.facing_right = True
+            # Voltea todas las imágenes de animación para que miren a la derecha.
+            for key in self.animations:
+                if isinstance(self.animations[key], list):
+                    self.animations[key] = [pygame.transform.flip(img, True, False) for img in self.animations[key]]
+                else:
+                    self.animations[key] = pygame.transform.flip(self.animations[key], True, False)
+        # --- Fin de lógica de animación ---
 
     def jump(self):
         """
         Hace que el jugador salte si está en el suelo.
         """
-        if self.en_suelo: # Solo puede saltar si está tocando una plataforma o el suelo.
-            self.velocidad_y = FUERZA_SALTO # Aplica la fuerza de salto hacia arriba.
-            self.en_suelo = False # Ya no está en el suelo.
+        if self.en_suelo:
+            self.velocidad_y = FUERZA_SALTO
+            self.en_suelo = False
+            # Al saltar, resetea el contador de animación para que el sprite de salto se muestre inmediatamente.
+            self.animation_counter = 0
 
     def stop_x(self):
         """
@@ -99,9 +150,3 @@ class Jugador(pygame.sprite.Sprite):
         Establece la velocidad para mover al jugador a la derecha.
         """
         self.velocidad_x = VELOCIDAD_JUGADOR
-
-    def draw(self, superficie):
-        """
-        Dibuja al jugador en la superficie de la pantalla.
-        """
-        superficie.blit(self.image, self.rect) # Dibuja la imagen del jugador en su posición.

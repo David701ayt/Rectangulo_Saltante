@@ -1,7 +1,6 @@
 # platform.py
 import pygame
-# Importa el color VERDE de las constantes.
-from constants import VERDE
+from constants import PLATFORM_SPRITE # Importa la ruta del sprite de la plataforma
 
 class Plataforma(pygame.sprite.Sprite):
     """
@@ -11,19 +10,17 @@ class Plataforma(pygame.sprite.Sprite):
     def __init__(self, x, y, ancho, alto):
         """
         Constructor de la clase Plataforma.
-        Inicializa la posición y tamaño de la plataforma.
+        Inicializa la posición y tamaño de la plataforma, y carga su imagen.
         """
-        super().__init__() # Llama al constructor de la clase padre.
-        # Crea una superficie para la plataforma (un rectángulo verde).
-        self.image = pygame.Surface([ancho, alto])
-        self.image.fill(VERDE) # Rellena la superficie con color verde.
-        # Crea un objeto Rect para la posición y tamaño de la plataforma.
+        super().__init__()
+        # Carga la imagen de la plataforma. Asegúrate de tener el archivo correcto.
+        try:
+            self.image = pygame.image.load(PLATFORM_SPRITE).convert_alpha()
+        except pygame.error as message:
+            print(f"No se pudo cargar la imagen: {PLATFORM_SPRITE}")
+            raise SystemExit(message)
+        # Escala la imagen para que coincida con el ancho y alto deseados de la plataforma.
+        self.image = pygame.transform.scale(self.image, (ancho, alto))
         self.rect = self.image.get_rect()
-        self.rect.x = x # Posición X de la plataforma.
-        self.rect.y = y # Posición Y de la plataforma.
-
-    def draw(self, superficie):
-        """
-        Dibuja la plataforma en la superficie de la pantalla.
-        """
-        superficie.blit(self.image, self.rect) # Dibuja la imagen de la plataforma.
+        self.rect.x = x
+        self.rect.y = y
