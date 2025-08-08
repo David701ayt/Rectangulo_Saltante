@@ -1,4 +1,4 @@
-# Rectangulo_Saltante
+# Kenney_Jump
 REPOSITORIO DE JUEGO Rectangulo_Saltante
 🎮 Características del Juego
 Generación de Niveles Procedimental: Cada nivel se genera de manera única y aleatoria, asegurando que cada partida sea diferente.
